@@ -1,17 +1,31 @@
 library(dplyr)
 ##Question 1 : the funcion parameter is the path to the UCI HAR Dataset directory
 ##exemple call : test1<-question1("D:/Profiles/user/Documents/RStudio/UCI HAR Dataset")
-##Load X_Train file and add 2 variables : class & id
+
 question1<-function(directory){
+      ##Load X_Train file and add 2 variables : class & id
       file1<-file.path(directory,"train/X_train.txt")
       train_data<-read.table(file=file1,header=FALSE)
       train_data%>%mutate(id=rownames(train_data),class="train")->train_data
+      ##Load subject_train file,add variable id and merge with train_data
+      file1a<-file.path(directory,"train/subject_train.txt")
+      trainsub_data<-read.table(file=file1a,header=FALSE)
+      trainsub_data%>%mutate(id=rownames(trainsub_data),subject=V1)%>%select(-c(V1))->trainsub_data
+      train_data<-merge(train_data,trainsub_data,by.x="id",by.y="id")
+      
       ##Load X_Test file
       file2<-file.path(directory,"test/X_test.txt")
       test_data<-read.table(file=file2,header=FALSE)
       test_data%>%mutate(id=rownames(test_data),class="test")->test_data
-      bind_data<-rbind(train_data,test_data)
       
+      ##Load subject_train file,add variable id and merge with test_data
+      file2a<-file.path(directory,"test/subject_test.txt")
+      testsub_data<-read.table(file=file2a,header=FALSE)
+      testsub_data%>%mutate(id=rownames(testsub_data),subject=V1)%>%select(-c(V1))->testsub_data
+      test_data<-merge(test_data,testsub_data,by.x="id",by.y="id")
+      
+      bind_data<-rbind(train_data,test_data)
+      bind_data
 }
 
 
@@ -24,7 +38,7 @@ question2<-function(directory,bind_data){
       feature_data<-read.table(file=file1,header=FALSE)
       temp<-strsplit(as.character(feature_data$V2),"-")
       lg<-length(temp)
-      vari<-character(length=lg)
+      vari<-character(length=lg+3)
       ##Search the feature.txt rows for the variable name
       ## Variable name is going to be on most cases a variable name
       ## plus the function name used for the measure
@@ -51,14 +65,15 @@ question2<-function(directory,bind_data){
                   ax<-temp[[i]][3]
                   varname<-paste(var,func,ax,"_",i)
             }
-            vari[i]<-varname
+            vari[i+1]<-varname
             
       }
-      vari[562]<-"id"
+      vari[1]<-"id"
+      vari[564]<-"subject"
       vari[563]<-"class"
       names(bind_data)<-vari
       ##This is where we get rid of the variable not about mean or std
-      bind_data%>%select(id,class,matches("mean\\(\\)|std\\(\\)"))->bind_data
+      bind_data%>%select(id,class,subject,matches("mean\\(\\)|std\\(\\)"))->bind_data
       bind_data
 }
 
@@ -104,7 +119,7 @@ question4<-function(bind_data){
 ## in question 4
 ##exemple call : test5<-question5(test4)
 question5<-function(bind_data){
-      bind_data%>%select(-c(id))%>%group_by(activity,class)%>%summarize_all(.funs = mean)->summarised_data
+      bind_data%>%select(-c(id,class))%>%group_by(activity,subject)%>%summarize_all(.funs = mean)->summarised_data
       summarised_data
 }
 
